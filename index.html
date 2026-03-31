@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>規律探險島 - 三年級數學闖關</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+        
+        body {
+            font-family: 'Varela Round', 'Microsoft JhengHei', sans-serif;
+            background-color: #e0f2fe; /* Light blue background */
+            background-image: radial-gradient(#bae6fd 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+
+        .btn-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-active:active {
+            transform: translateY(1px);
+        }
+
+        /* 簡單的彩帶動畫 */
+        @keyframes fall {
+            0% { transform: translateY(-100vh) rotate(0deg); }
+            100% { transform: translateY(100vh) rotate(360deg); }
+        }
+        .confetti {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            background-color: #fcd34d;
+            animation: fall linear forwards;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- 遊戲主容器 -->
+    <div id="game-container" class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border-4 border-sky-300 relative">
+        
+        <!-- 標題與資訊列 (遊戲中顯示) -->
+        <div id="header" class="bg-sky-400 text-white p-4 flex justify-between items-center hidden">
+            <div class="text-xl font-bold flex items-center">
+                <span>🌟 規律探險島</span>
+            </div>
+            <div class="flex space-x-4 text-lg font-bold">
+                <div class="bg-sky-500 px-3 py-1 rounded-full">
+                    第 <span id="question-number">1</span> / 20 關
+                </div>
+                <div class="bg-amber-400 px-3 py-1 rounded-full text-amber-900">
+                    金幣：<span id="score">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 進度條 -->
+        <div id="progress-bar-container" class="w-full bg-gray-200 h-3 hidden">
+            <div id="progress-bar" class="bg-green-400 h-3 transition-all duration-500 w-0"></div>
+        </div>
+
+        <!-- 開始畫面 -->
+        <div id="start-screen" class="p-10 text-center">
+            <h1 class="text-5xl font-extrabold text-sky-600 mb-6 drop-shadow-sm">🏝️ 規律探險島</h1>
+            <p class="text-xl text-gray-600 mb-8 leading-relaxed">
+                歡迎來到規律探險島！<br>
+                這裡有 20 個神秘的規律關卡。<br>
+                請仔細觀察，找出正確的答案，收集金幣吧！
+            </p>
+            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=explorer&backgroundColor=bae6fd" alt="探險機器人" class="w-32 h-32 mx-auto mb-8 rounded-full border-4 border-sky-200 shadow-md">
+            <button onclick="startGame()" class="bg-amber-400 text-amber-900 font-bold text-2xl py-4 px-10 rounded-full btn-hover btn-active shadow-lg border-b-4 border-amber-500 transition-all">
+                🚀 開始探險
+            </button>
+        </div>
+
+        <!-- 遊戲畫面 -->
+        <div id="game-screen" class="p-8 hidden">
+            <div id="category-badge" class="inline-block bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded-full mb-4 text-sm">
+                題型分類
+            </div>
+            
+            <h2 id="question-text" class="text-3xl font-bold text-gray-800 mb-8 leading-snug">
+                <!-- 題目內容會顯示在這裡 -->
+            </h2>
+
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 選項按鈕會顯示在這裡 -->
+            </div>
+        </div>
+
+        <!-- 結束畫面 -->
+        <div id="end-screen" class="p-10 text-center hidden">
+            <h1 class="text-5xl font-extrabold text-green-500 mb-4">🎉 探險完成！</h1>
+            <p class="text-2xl text-gray-700 mb-6">你真是規律尋寶大師！</p>
+            
+            <div class="bg-amber-100 border-4 border-amber-300 rounded-2xl p-6 mb-8 inline-block">
+                <p class="text-xl text-amber-800 font-bold mb-2">本次獲得金幣</p>
+                <p class="text-6xl font-black text-amber-500"><span id="final-score">0</span> / 200</p>
+            </div>
+
+            <br>
+            <button onclick="resetGame()" class="bg-sky-500 text-white font-bold text-xl py-3 px-8 rounded-full btn-hover btn-active shadow-lg border-b-4 border-sky-600 transition-all">
+                🔄 再玩一次
+            </button>
+        </div>
+
+        <!-- 回饋提示 (答對/答錯) -->
+        <div id="feedback-overlay" class="absolute inset-0 flex items-center justify-center bg-white/90 hidden z-40 transition-opacity">
+            <div id="feedback-content" class="text-center transform scale-0 transition-transform duration-300">
+                <div id="feedback-icon" class="text-8xl mb-4">⭕</div>
+                <h2 id="feedback-text" class="text-4xl font-bold text-green-500">太棒了！答對啦！</h2>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 題庫設計 (20題)
+        const questions = [
+            // 第一大題：數字找規律
+            { category: "一、數字找規律", text: "請找出規律填空：<br>15 , 20 , 25 , 30 , ( ? ) , ( ? )", options: ["35 , 40", "31 , 32", "40 , 45"], answer: 0 },
+            { category: "一、數字找規律", text: "請找出規律填空：<br>88 , 80 , 72 , 64 , ( ? ) , ( ? )", options: ["60 , 52", "56 , 48", "54 , 46"], answer: 1 },
+            { category: "一、數字找規律", text: "請找出規律填空：<br>7 , 14 , 21 , 28 , ( ? ) , ( ? )", options: ["30 , 32", "36 , 45", "35 , 42"], answer: 2 },
+            { category: "一、數字找規律", text: "請找出規律填空：<br>105 , 205 , 305 , ( ? ) , 505 , ( ? )", options: ["405 , 605", "315 , 515", "400 , 600"], answer: 0 },
+            { category: "一、數字找規律", text: "請找出規律填空：<br>1 , 4 , 7 , 10 , ( ? ) , ( ? )", options: ["11 , 12", "13 , 16", "12 , 14"], answer: 1 },
+            
+            // 第二大題：奇數與偶數
+            { category: "二、奇數與偶數", text: "下列哪一組數字「全部」都是奇數？", options: ["12, 34, 88", "27, 45, 91", "27, 34, 91"], answer: 1 },
+            { category: "二、奇數與偶數", text: "觀察數列： 11, 13, 15, 17, 19。<br>請問這些數字都是？", options: ["奇數", "偶數", "有奇數也有偶數"], answer: 0 },
+            { category: "二、奇數與偶數", text: "如果把兩個「偶數」加在一起<br>（例如：2 + 4 = 6），得到的答案一定會是？", options: ["奇數", "不一定", "偶數"], answer: 2 },
+            
+            // 第三大題：圖形與顏色的規律
+            { category: "三、圖形與顏色", text: "請找出規律：<br>△ , □ , ○ , △ , □ , ○ , ( ? ) , ( ? )", options: ["○ , △", "△ , □", "□ , ○"], answer: 1 },
+            { category: "三、圖形與顏色", text: "請找出規律：<br>↑ , → , ↓ , ← , ↑ , → , ( ? ) , ( ? )", options: ["↓ , ←", "← , ↑", "↑ , →"], answer: 0 },
+            { category: "三、圖形與顏色", text: "老師串項鍊，規律是「黑、黑、白、黑、黑、白……」。<br>請問第 10 顆珠子是什麼顏色？", options: ["黑色", "白色", "紅色"], answer: 0 },
+            { category: "三、圖形與顏色", text: "貼紙規律是「🌟、🌟、🌸、🌸、🌟、🌟、🌸、🌸……」。<br>請問第 15 張貼紙是什麼圖案？", options: ["🌟 星星", "🌸 櫻花", "無法決定"], answer: 1 },
+            
+            // 第四大題：月曆與百數表
+            { category: "四、月曆與百數表", text: "在同一個月裡，如果星期二是 5 月 4 日，<br>那麼「下一個星期二」會是 5 月幾日？", options: ["5月10日", "5月11日", "5月12日"], answer: 1 },
+            { category: "四、月曆與百數表", text: "在月曆上，同一個星期裡（例如每個星期三），<br>上下的日期都會固定相差幾天？", options: ["5天", "6天", "7天"], answer: 2 },
+            { category: "四、月曆與百數表", text: "在百數表中，往「右」走一格<br>（例如從 32 走到 33），數字會？", options: ["增加 1", "增加 10", "減少 1"], answer: 0 },
+            { category: "四、月曆與百數表", text: "在百數表中，往「下」走一格<br>（例如從 15 走到 25），數字會？", options: ["增加 1", "增加 10", "減少 10"], answer: 1 },
+            
+            // 第五大題：生活中的規律
+            { category: "五、生活中的規律", text: "小美存錢，第一天10元，第二天20元，第三天30元。<br>依照規律，她「第五天」要存多少元？", options: ["40 元", "50 元", "60 元"], answer: 1 },
+            { category: "五、生活中的規律", text: "左邊那排座號是 1, 3, 5, 7, 9<br>右邊那排座號是 2, 4, 6, 8, 10<br>請問「14號」同學坐在哪一邊？", options: ["左邊", "右邊", "中間"], answer: 1 },
+            { category: "五、生活中的規律", text: "排隊規律是「男生、女生、男生、女生……」。<br>請問排在第 11 個的同學是？", options: ["男生", "女生", "老師"], answer: 0 },
+            { category: "五、生活中的規律", text: "小樹苗剛種下5公分，每天長高2公分。<br>第一天結束是7公分。請問「第五天」結束是幾公分？", options: ["13 公分", "15 公分", "17 公分"], answer: 1 }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // 綁定 DOM 元素
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+        const header = document.getElementById('header');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBar = document.getElementById('progress-bar');
+        
+        const questionNumberEl = document.getElementById('question-number');
+        const scoreEl = document.getElementById('score');
+        const categoryBadge = document.getElementById('category-badge');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackContent = document.getElementById('feedback-content');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackText = document.getElementById('feedback-text');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // 音效 (可選，這裡用簡單提示聲或無聲動畫替代)
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            header.classList.remove('hidden');
+            progressBarContainer.classList.remove('hidden');
+            gameScreen.classList.remove('hidden');
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            updateScoreDisplay();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const currentQ = questions[currentQuestionIndex];
+            
+            // 更新 UI
+            questionNumberEl.innerText = currentQuestionIndex + 1;
+            categoryBadge.innerText = currentQ.category;
+            questionTextEl.innerHTML = currentQ.text;
+            
+            // 更新進度條
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // 清空並產生選項
+            optionsContainer.innerHTML = '';
+            
+            // 隨機打亂選項 (保留原本的答案邏輯)
+            let optionsWithIndex = currentQ.options.map((opt, index) => ({ text: opt, originalIndex: index }));
+            // 洗牌演算法
+            for (let i = optionsWithIndex.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
+            }
+
+            optionsWithIndex.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.innerHTML = `<span class="text-xl">${opt.text}</span>`;
+                btn.className = "bg-white border-4 border-sky-100 text-gray-700 font-bold p-6 rounded-2xl btn-hover btn-active text-left transition-all hover:border-sky-300 hover:bg-sky-50";
+                btn.onclick = () => checkAnswer(opt.originalIndex);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex) {
+            const currentQ = questions[currentQuestionIndex];
+            const isCorrect = (selectedIndex === currentQ.answer);
+            
+            showFeedback(isCorrect);
+
+            if (isCorrect) {
+                score += 10; // 答對加 10 枚金幣
+                updateScoreDisplay();
+            }
+
+            // 延遲後進入下一題
+            setTimeout(() => {
+                hideFeedback();
+                currentQuestionIndex++;
+                
+                if (currentQuestionIndex < questions.length) {
+                    loadQuestion();
+                } else {
+                    endGame();
+                }
+            }, 1500);
+        }
+
+        function showFeedback(isCorrect) {
+            feedbackOverlay.classList.remove('hidden');
+            // 讓瀏覽器重新渲染一次再加動畫 class
+            setTimeout(() => {
+                feedbackContent.classList.remove('scale-0');
+                feedbackContent.classList.add('scale-100');
+            }, 10);
+
+            if (isCorrect) {
+                feedbackIcon.innerText = "⭕";
+                feedbackIcon.className = "text-8xl mb-4 text-green-500 drop-shadow-md";
+                feedbackText.innerText = "太棒了！答對啦！\n+10 金幣 💰";
+                feedbackText.className = "text-4xl font-bold text-green-500 drop-shadow-sm";
+            } else {
+                feedbackIcon.innerText = "❌";
+                feedbackIcon.className = "text-8xl mb-4 text-red-500 drop-shadow-md";
+                feedbackText.innerText = "哎呀！差一點點！\n加油加油 💪";
+                feedbackText.className = "text-4xl font-bold text-red-500 drop-shadow-sm";
+            }
+        }
+
+        function hideFeedback() {
+            feedbackContent.classList.remove('scale-100');
+            feedbackContent.classList.add('scale-0');
+            setTimeout(() => {
+                feedbackOverlay.classList.add('hidden');
+            }, 300);
+        }
+
+        function updateScoreDisplay() {
+            scoreEl.innerText = score;
+        }
+
+        function endGame() {
+            gameScreen.classList.add('hidden');
+            header.classList.add('hidden');
+            progressBarContainer.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            
+            finalScoreEl.innerText = score;
+            
+            // 如果滿分，產生彩帶
+            if (score === 200) {
+                createConfetti();
+            }
+        }
+
+        function resetGame() {
+            endScreen.classList.add('hidden');
+            // 移除所有彩帶
+            document.querySelectorAll('.confetti').forEach(e => e.remove());
+            startGame();
+        }
+
+        // 簡單的彩帶特效
+        function createConfetti() {
+            const colors = ['#fcd34d', '#f87171', '#60a5fa', '#34d399', '#a78bfa'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti rounded-sm';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                document.body.appendChild(confetti);
+            }
+        }
+    </script>
+</body>
+</html>
